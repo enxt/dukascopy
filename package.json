@@ -8,9 +8,6 @@
     "download": "^7.1.0",
     "leftpad": "^0.0.1",
     "lzma-purejs": "^0.9.3",
-    "minimist": "^1.2.0",
-    "moment": "^2.22.2",
-    "node-fetch": "^2.2.1",
-    "plotly": "^1.0.6"
+    "moment": "^2.22.2"
   }
 }

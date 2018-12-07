@@ -42,7 +42,7 @@ function dukascopy_url(instrument, date, type) {
         left_pad(date.date(), 2, "0"));
 }
 
-function processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname) {
+function processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname, filterflat) {
     return new Promise(resolve => {
         let subdir = bidir + "/" + instrument + "/" + left_pad(date.year(), 4, "0") + "/" + left_pad(date.month(), 2, "0");
 
@@ -71,7 +71,11 @@ function processFiles(datadir, bidir, instrument, startdatep, enddate, date, pre
                 strvalues += "," + (parseFloat(abiddata[5]) + parseFloat(aaskdata[5])).toFixed(2); // Volume
                 strvalues += "," + Math.abs(parseInt(abiddata[4]) - parseInt(aaskdata[4])); // Spread
 
-                if (strvalues != prevdata) {
+                if(filterflat) {
+                    if (strvalues != prevdata) {
+                        middata += strdate + strvalues + "\r\n";
+                    }
+                } else {
                     middata += strdate + strvalues + "\r\n";
                 }
 
@@ -90,7 +94,7 @@ function download1(url, prefixname, bidir) {
     });
 }
 
-async function fetch_date(datadir, startdatep, enddate, instrument, bidir, date) {
+async function fetch_date(datadir, startdatep, enddate, instrument, bidir, date, filterflat) {
     let urlbid = dukascopy_url(instrument, date, "BID");
     let urlask = dukascopy_url(instrument, date, "ASK");
     let prefixname = date.format("YYYYMMDD");
@@ -102,25 +106,25 @@ async function fetch_date(datadir, startdatep, enddate, instrument, bidir, date)
 
     if (fs.existsSync(subdir + "/BID_" + prefixname + ".bi5") && fs.existsSync(subdir + "/ASK_" + prefixname + ".bi5")) {
         console.log(subdir + "/BID_" + prefixname + ".bi5", "ya existen, no descargo");
-        await processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname);
+        await processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname, filterflat);
     } else {
         console.log(subdir + "/BID_" + prefixname + ".bi5", " descargo");
 
         await download1(urlbid, "BID_" + prefixname, subdir);
         await download1(urlask, "ASK_" + prefixname, subdir);
 
-        await processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname);
+        await processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname, filterflat);
     }
 }
 
-async function fetch_range(datadir, startdatep, instrument, bidir, start, end) {
+async function fetch_range(datadir, startdatep, instrument, bidir, start, end, filterflat) {
     // await fetch_date(datadir, startdatep, end, instrument, bidir, start);
     // start.add(1, "days");
     // if(!start.isAfter(end)){
     //     await fetch_range(datadir, startdatep, instrument, bidir, start, end);
     // }
     while (!start.isAfter(end)) {
-        await fetch_date(datadir, startdatep, end, instrument, bidir, start);
+        await fetch_date(datadir, startdatep, end, instrument, bidir, start, filterflat);
         start.add(1, "days");
     }
 }
@@ -162,8 +166,9 @@ function parseCandleBin(candledata, inarray) {
     return acandledata;
 }
 
-module.exports = async (instrument, startdate, enddate) => {
+module.exports = async (instrument, startdate, enddate, filterflat = true) => {
     const startdatep = moment(startdate);
+    let deffile;
 
     init();
     if (typeof enddate == "undefined") {
@@ -174,10 +179,12 @@ module.exports = async (instrument, startdate, enddate) => {
 
     if (typeof instrument != "undefined" && typeof startdate != "undefined") {
         startdate = moment.utc(startdate);
-        if (fs.existsSync("./data/" + instrument + "_" + startdate.format("YYYYMMDD") + "-" + enddate.format("YYYYMMDD") + ".csv")) {
-            fs.unlinkSync("./data/" + instrument + "_" + startdate.format("YYYYMMDD") + "-" + enddate.format("YYYYMMDD") + ".csv");
+        deffile = "./data/" + instrument + "_" + startdate.format("YYYYMMDD") + "-" + enddate.format("YYYYMMDD") + ".csv";
+        if (fs.existsSync(deffile)) {
+            fs.unlinkSync(deffile);
         }
-        await fetch_range(datadir, startdatep, instrument, bidir, startdate, enddate);
+        await fetch_range(datadir, startdatep, instrument, bidir, startdate, enddate, filterflat);
     }
 
+    return deffile;
 }

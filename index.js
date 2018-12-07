@@ -105,7 +105,6 @@ async function fetch_date(datadir, startdatep, enddate, instrument, bidir, date,
     }
 
     if (fs.existsSync(subdir + "/BID_" + prefixname + ".bi5") && fs.existsSync(subdir + "/ASK_" + prefixname + ".bi5")) {
-        console.log(subdir + "/BID_" + prefixname + ".bi5", "ya existen, no descargo");
         await processFiles(datadir, bidir, instrument, startdatep, enddate, date, prefixname, filterflat);
     } else {
         console.log(subdir + "/BID_" + prefixname + ".bi5", " descargo");
